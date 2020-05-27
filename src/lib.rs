@@ -18,49 +18,71 @@ extern "C" {
 const GRID_WIDTH: usize = 16;
 const GRID_HEIGHT: usize = 16;
 const PIXELS_PER_SQUARE_SIDE: f64 = 20.0;
+// todo: test blend mode of canvas by using alpha less than 1 and seeing how
+//  colors mix. Is it necessary to clear_rect before each fill_rect?
+const RGBA_MAGENTA: &str = "rgba(255,0,255,1)";
+const RGBA_CYAN: &str = "rgba(255,50,255,1)";
 
 
-#[wasm_bindgen(start)]
-pub fn start() {
-    log("running");
-    log(&format!("yo: 5 % 2 = {} and -5 % 2 = {}", 5 % 2, -5 % 2));
-    console_error_panic_hook::set_once();
+fn get_canvas() -> web_sys::HtmlCanvasElement {
     let document = web_sys::window().unwrap().document().unwrap();
     let canvas = document.get_element_by_id("canvas").unwrap();
     let canvas: web_sys::HtmlCanvasElement = canvas
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|_| ())
         .unwrap();
+    canvas
+}
 
+fn get_2d_context(canvas: &web_sys::HtmlCanvasElement)
+                  -> web_sys::CanvasRenderingContext2d {
     let context = canvas
         .get_context("2d")
         .unwrap()
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
+    context
+}
 
+
+#[wasm_bindgen(start)]
+pub fn start() {
+    console_error_panic_hook::set_once();
+
+    let canvas = get_canvas();
+    let context = get_2d_context(&canvas);
+    let mut game_running = false;
     let mut board = Board::new(40, GRID_WIDTH, GRID_HEIGHT);
+
+
     render_grid(&context, &board);
 
-    let mut game_running = false;
-    let click_handler = Closure::wrap(Box::new(move |event: web_sys::MouseEvent| {
-        event.prevent_default();
+    let cloz = move |event: web_sys::MouseEvent| {
         let x = event.offset_x();
         let y = event.offset_y();
+
         log(&format!("x: {}, y: {}", x, y));
-        log(&format!("{:?}", event));
+
         if !game_running {
             board.place_mines();
+            board.set_cells_num_bomb_neighbors();
             game_running = true;
             log("mines placed");
         } else {
-            // update game state
+            // determine click type
+            // convert the offset_x and offset_y to board coords
+            board.update_state(0, 0, Click::Left);
             log("game is running - updateBoardState()");
         }
-    }) as Box<dyn FnMut(_)>);
+
+        render_grid(&context, &board);
+    };
+
+    let click_handler = Closure::wrap(Box::new(cloz) as Box<dyn FnMut(_)>);
 
     let context_menu_cb = Closure::wrap(
-        Box::new(move |event: web_sys::MouseEvent| {
+        Box::new(|event: web_sys::MouseEvent| {
             event.prevent_default();
         }) as Box<dyn FnMut(_)>);
 
@@ -80,18 +102,26 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
     for i in 0..num_cells {
         let x = i % GRID_WIDTH;
         let y = i / GRID_WIDTH;
-        let mut fill_style: JsValue;
-        if board.cells[i as usize].has_mine {
-            fill_style = JsValue::from_str("rgba(255,0,255,1)");
-        } else {
-            fill_style = JsValue::from_str("rgba(125,50,255,1)");
-        }
+        let fill_style = JsValue::from_str(match board.cells[i].state {
+            TileState::Revealed => RGBA_CYAN,
+            _ => RGBA_MAGENTA
+        });
+        //pub fn stroke_text(&self, text: &str, x: f64, y: f64) -> Result<(), JsValue>
+        //pub fn stroke_text_with_max_width(
+        //     &self,
+        //     text: &str,
+        //     x: f64,
+        //     y: f64,
+        //     max_width: f64
+        // ) -> Result<(), JsValue>
+
         context.set_fill_style(&fill_style);
         context.fill_rect(x as f64 * PIXELS_PER_SQUARE_SIDE,
                           y as f64 * PIXELS_PER_SQUARE_SIDE,
                           PIXELS_PER_SQUARE_SIDE,
                           PIXELS_PER_SQUARE_SIDE,
         );
+        // todo: this only needs to be called first time the board is drawn
         context.stroke_rect(x as f64 * PIXELS_PER_SQUARE_SIDE,
                             y as f64 * PIXELS_PER_SQUARE_SIDE,
                             PIXELS_PER_SQUARE_SIDE,
@@ -99,3 +129,5 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
         );
     }
 }
+
+

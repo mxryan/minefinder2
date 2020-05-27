@@ -30,6 +30,12 @@ pub struct Cell {
     pub has_mine: bool,
 }
 
+#[derive(Debug, PartialEq)]
+pub enum Click {
+    Left,
+    Right,
+}
+
 impl Board {
     pub fn new(mines: i32, rows: usize, columns: usize) -> Board {
         let num_cells = (rows * columns);
@@ -79,31 +85,37 @@ impl Board {
             if self.cells[i].has_mine {
                 continue;
             }
-            let mut cell = &mut self.cells[i];
+            self.cells[i].neighboring_mines = self.count_neighboring_bombs(i);
         }
     }
 
     pub fn count_neighboring_bombs(&self, i: usize) -> i32 {
         let mut count = 0;
         let (x, y) = self.index_to_coords(i);
+        let total_cells = self.get_total_number_of_cells();
+
         for offset_x in -1i32..=1i32 {
             let x_to_check = x as i32 + offset_x;
             if x_to_check < 0 {
                 continue;
             }
+
             for offset_y in -1i32..=1i32 {
                 let y_to_check = y as i32 + offset_y;
                 if y_to_check < 0 || (x_to_check == 0 && y_to_check == 0) {
                     continue;
                 }
-
                 let index_to_check = self.coords_to_index(x_to_check as usize,
                                                           y_to_check as usize);
+                if index_to_check >= total_cells {
+                    continue;
+                }
                 if self.cells[index_to_check].has_mine {
                     count += 1;
                 }
             }
         }
+
         count
     }
 
@@ -117,6 +129,18 @@ impl Board {
 
     pub fn get_total_number_of_cells(&self) -> usize {
         return self.rows * self.columns;
+    }
+
+    pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
+        // https://stackoverflow.com/questions/51429501/how-do-i-conditionally-check-if-an-enum-is-one-variant-or-another
+        if click == Click::Left {
+            // fixme: this is an immutable borrow while i already have a
+            //  mutable borrow. doesnt compile
+            // see: https://stackoverflow.com/questions/35936995/mutating-one-field-while-iterating-over-another-immutable-field
+            self.cells[self.coords_to_index(x, y)].state = TileState::Revealed;
+        } else {
+            self.cells[self.coords_to_index(x, y)].state = TileState::Flagged;
+        }
     }
 }
 
