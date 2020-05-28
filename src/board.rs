@@ -132,14 +132,12 @@ impl Board {
     }
 
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
-        // https://stackoverflow.com/questions/51429501/how-do-i-conditionally-check-if-an-enum-is-one-variant-or-another
+        let i = self.coords_to_index(x, y);
+
         if click == Click::Left {
-            // fixme: this is an immutable borrow while i already have a
-            //  mutable borrow. doesnt compile
-            // see: https://stackoverflow.com/questions/35936995/mutating-one-field-while-iterating-over-another-immutable-field
-            self.cells[self.coords_to_index(x, y)].state = TileState::Revealed;
+            self.cells[i].state = TileState::Revealed;
         } else {
-            self.cells[self.coords_to_index(x, y)].state = TileState::Flagged;
+            self.cells[i].state = TileState::Flagged;
         }
     }
 }

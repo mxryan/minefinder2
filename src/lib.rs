@@ -21,7 +21,7 @@ const PIXELS_PER_SQUARE_SIDE: f64 = 20.0;
 // todo: test blend mode of canvas by using alpha less than 1 and seeing how
 //  colors mix. Is it necessary to clear_rect before each fill_rect?
 const RGBA_MAGENTA: &str = "rgba(255,0,255,1)";
-const RGBA_CYAN: &str = "rgba(255,50,255,1)";
+const RGBA_CYAN: &str = "rgba(0,255,255,1)";
 
 
 fn get_canvas() -> web_sys::HtmlCanvasElement {
@@ -31,6 +31,7 @@ fn get_canvas() -> web_sys::HtmlCanvasElement {
         .dyn_into::<web_sys::HtmlCanvasElement>()
         .map_err(|_| ())
         .unwrap();
+
     canvas
 }
 
@@ -42,6 +43,7 @@ fn get_2d_context(canvas: &web_sys::HtmlCanvasElement)
         .unwrap()
         .dyn_into::<web_sys::CanvasRenderingContext2d>()
         .unwrap();
+
     context
 }
 
@@ -70,9 +72,16 @@ pub fn start() {
             game_running = true;
             log("mines placed");
         } else {
-            // determine click type
+
+            let click = match event.button() {
+                0 => Click::Left,
+                2 => Click::Right,
+                _ => return
+            };
+
             // convert the offset_x and offset_y to board coords
-            board.update_state(0, 0, Click::Left);
+            let (a, b) = convert_coords(x, y);
+            board.update_state(a as usize, b as usize, click);
             log("game is running - updateBoardState()");
         }
 
@@ -106,15 +115,9 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
             TileState::Revealed => RGBA_CYAN,
             _ => RGBA_MAGENTA
         });
-        //pub fn stroke_text(&self, text: &str, x: f64, y: f64) -> Result<(), JsValue>
-        //pub fn stroke_text_with_max_width(
-        //     &self,
-        //     text: &str,
-        //     x: f64,
-        //     y: f64,
-        //     max_width: f64
-        // ) -> Result<(), JsValue>
-
+        if fill_style == RGBA_CYAN {
+            log("YOOOO ITS CYAN");
+        }
         context.set_fill_style(&fill_style);
         context.fill_rect(x as f64 * PIXELS_PER_SQUARE_SIDE,
                           y as f64 * PIXELS_PER_SQUARE_SIDE,
@@ -128,6 +131,10 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
                             PIXELS_PER_SQUARE_SIDE,
         );
     }
+}
+
+fn convert_coords(x: i32, y:i32) -> (i32, i32) {
+    (x / PIXELS_PER_SQUARE_SIDE as i32, y / PIXELS_PER_SQUARE_SIDE as i32)
 }
 
 
