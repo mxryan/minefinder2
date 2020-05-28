@@ -17,11 +17,10 @@ extern "C" {
 
 const GRID_WIDTH: usize = 16;
 const GRID_HEIGHT: usize = 16;
-const PIXELS_PER_SQUARE_SIDE: f64 = 20.0;
-// todo: test blend mode of canvas by using alpha less than 1 and seeing how
-//  colors mix. Is it necessary to clear_rect before each fill_rect?
+const CELL_LEN: f64 = 20.0;
 const RGBA_MAGENTA: &str = "rgba(255,0,255,1)";
 const RGBA_CYAN: &str = "rgba(0,255,255,1)";
+const RGBA_WHITE: &str = "rgba(255,255,255,1)";
 
 
 fn get_canvas() -> web_sys::HtmlCanvasElement {
@@ -57,7 +56,6 @@ pub fn start() {
     let mut game_running = false;
     let mut board = Board::new(40, GRID_WIDTH, GRID_HEIGHT);
 
-
     render_grid(&context, &board);
 
     let cloz = move |event: web_sys::MouseEvent| {
@@ -72,14 +70,11 @@ pub fn start() {
             game_running = true;
             log("mines placed");
         } else {
-
             let click = match event.button() {
                 0 => Click::Left,
                 2 => Click::Right,
                 _ => return
             };
-
-            // convert the offset_x and offset_y to board coords
             let (a, b) = convert_coords(x, y);
             board.update_state(a as usize, b as usize, click);
             log("game is running - updateBoardState()");
@@ -109,32 +104,51 @@ pub fn start() {
 fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
     let num_cells = board.get_total_number_of_cells();
     for i in 0..num_cells {
-        let x = i % GRID_WIDTH;
-        let y = i / GRID_WIDTH;
-        let fill_style = JsValue::from_str(match board.cells[i].state {
-            TileState::Revealed => RGBA_CYAN,
-            _ => RGBA_MAGENTA
-        });
-        if fill_style == RGBA_CYAN {
-            log("YOOOO ITS CYAN");
-        }
-        context.set_fill_style(&fill_style);
-        context.fill_rect(x as f64 * PIXELS_PER_SQUARE_SIDE,
-                          y as f64 * PIXELS_PER_SQUARE_SIDE,
-                          PIXELS_PER_SQUARE_SIDE,
-                          PIXELS_PER_SQUARE_SIDE,
-        );
+        let x = (i % GRID_WIDTH) as f64;
+        let y = (i / GRID_WIDTH) as f64;
+
         // todo: this only needs to be called first time the board is drawn
-        context.stroke_rect(x as f64 * PIXELS_PER_SQUARE_SIDE,
-                            y as f64 * PIXELS_PER_SQUARE_SIDE,
-                            PIXELS_PER_SQUARE_SIDE,
-                            PIXELS_PER_SQUARE_SIDE,
-        );
+        //  and instead of drawing each individual rect i could just draw a
+        //  bunch of straight lines
+        context.stroke_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
+
+
+        let font = "14px serif";
+        context.set_font(font);
+        match board.cells[i].state {
+            TileState::Hidden => {
+                context.set_fill_style(&JsValue::from_str(RGBA_MAGENTA));
+                context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
+            }
+
+            TileState::Flagged => {
+                context.set_fill_style(&JsValue::from_str(RGBA_MAGENTA));
+                context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
+                context.stroke_text("F",  x * CELL_LEN + CELL_LEN / 2.5,
+                                    y * CELL_LEN + CELL_LEN / 1.5, );
+            }
+
+            TileState::Revealed => {
+                context.set_fill_style(&JsValue::from_str(RGBA_CYAN));
+                context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
+                if board.cells[i].has_mine {
+                    context.stroke_text("X", x * CELL_LEN + CELL_LEN / 2.5,
+                                        y * CELL_LEN + CELL_LEN / 1.5, );
+                } else {
+                    context.stroke_text(
+                        &format!("{}", board.cells[i].neighboring_mines),
+                        x * CELL_LEN + CELL_LEN / 2.5,
+                        y * CELL_LEN + CELL_LEN / 1.5,
+                    );
+                }
+            }
+        }
     }
 }
 
-fn convert_coords(x: i32, y:i32) -> (i32, i32) {
-    (x / PIXELS_PER_SQUARE_SIDE as i32, y / PIXELS_PER_SQUARE_SIDE as i32)
+fn convert_coords(x: i32, y: i32) -> (i32, i32) {
+    (x / CELL_LEN as i32, y / CELL_LEN as i32)
 }
+
 
 

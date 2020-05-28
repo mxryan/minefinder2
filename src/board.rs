@@ -133,7 +133,6 @@ impl Board {
 
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
         let i = self.coords_to_index(x, y);
-
         if click == Click::Left {
             self.cells[i].state = TileState::Revealed;
         } else {
