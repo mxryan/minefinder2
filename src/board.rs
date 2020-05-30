@@ -17,7 +17,7 @@ pub struct Board {
 }
 
 #[derive(Debug)]
-pub enum TileState {
+pub enum CellState {
     Hidden,
     Revealed,
     Flagged,
@@ -26,7 +26,7 @@ pub enum TileState {
 #[derive(Debug)]
 pub struct Cell {
     pub neighboring_mines: i32,
-    pub state: TileState,
+    pub state: CellState,
     pub has_mine: bool,
 }
 
@@ -43,7 +43,7 @@ impl Board {
         for _ in 0..num_cells {
             cells.push(Cell {
                 neighboring_mines: 0,
-                state: TileState::Hidden,
+                state: CellState::Hidden,
                 has_mine: false,
             });
         }
@@ -51,7 +51,8 @@ impl Board {
     }
 
     /// TODO: make sure the initial square clicked doesn't have a mine
-    pub fn place_mines(&mut self) {
+    pub fn place_mines(&mut self, x_avoid: usize, y_avoid: usize) {
+        let index_to_avoid = self.coords_to_index(x_avoid, y_avoid);
         let mut mines_to_place = self.mines;
         let num_tiles = (self.rows * self.columns) as usize;
         let threshold = self.mines as f64 / num_tiles as f64;
@@ -63,7 +64,7 @@ impl Board {
                 if mines_to_place < 1 {
                     break;
                 }
-                if self.cells[i].has_mine {
+                if self.cells[i].has_mine || i == index_to_avoid {
                     continue;
                 }
                 let rand = get_random_f64();
@@ -72,7 +73,6 @@ impl Board {
                     mines_to_place -= 1;
                 }
             }
-
             if mines_to_place < 1 {
                 break;
             }
@@ -134,9 +134,34 @@ impl Board {
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
         let i = self.coords_to_index(x, y);
         if click == Click::Left {
-            self.cells[i].state = TileState::Revealed;
+            self.cells[i].state = CellState::Revealed;
         } else {
-            self.cells[i].state = TileState::Flagged;
+            self.cells[i].state = CellState::Flagged;
+        }
+    }
+
+    pub fn print_grid(&self) {
+
+    }
+}
+
+impl Cell {
+    fn repr_val(&self) -> char {
+        if self.has_mine {
+            'x'
+        } else { // surely there is a better way to do this
+            match self.neighboring_mines {
+                0 => '0',
+                1 => '1',
+                2 => '2',
+                3 => '3',
+                4 => '4',
+                5 => '5',
+                6 => '6',
+                7 => '7',
+                8 => '8',
+                _ => '?'
+            }
         }
     }
 }

@@ -6,14 +6,11 @@ mod board;
 
 use board::*;
 
-mod tile;
-
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
 }
-
 
 const GRID_WIDTH: usize = 16;
 const GRID_HEIGHT: usize = 16;
@@ -59,25 +56,22 @@ pub fn start() {
     render_grid(&context, &board);
 
     let cloz = move |event: web_sys::MouseEvent| {
-        let x = event.offset_x();
-        let y = event.offset_y();
+        let (x, y) = convert_coords(event.offset_x(), event.offset_y());
+        let click = match event.button() {
+            0 => Click::Left,
+            2 => Click::Right,
+            _ => return
+        };
 
         log(&format!("x: {}, y: {}", x, y));
 
         if !game_running {
-            board.place_mines();
+            board.place_mines(x as usize, y as usize);
             board.set_cells_num_bomb_neighbors();
+            board.update_state(x as usize, y as usize, click);
             game_running = true;
-            log("mines placed");
-        } else {
-            let click = match event.button() {
-                0 => Click::Left,
-                2 => Click::Right,
-                _ => return
-            };
-            let (a, b) = convert_coords(x, y);
-            board.update_state(a as usize, b as usize, click);
-            log("game is running - updateBoardState()");
+        } else if game_running {
+            board.update_state(x as usize, y as usize, click);
         }
 
         render_grid(&context, &board);
@@ -116,19 +110,19 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
         let font = "14px serif";
         context.set_font(font);
         match board.cells[i].state {
-            TileState::Hidden => {
+            CellState::Hidden => {
                 context.set_fill_style(&JsValue::from_str(RGBA_MAGENTA));
                 context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
             }
 
-            TileState::Flagged => {
+            CellState::Flagged => {
                 context.set_fill_style(&JsValue::from_str(RGBA_MAGENTA));
                 context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
-                context.stroke_text("F",  x * CELL_LEN + CELL_LEN / 2.5,
+                context.stroke_text("F", x * CELL_LEN + CELL_LEN / 2.5,
                                     y * CELL_LEN + CELL_LEN / 1.5, );
             }
 
-            TileState::Revealed => {
+            CellState::Revealed => {
                 context.set_fill_style(&JsValue::from_str(RGBA_CYAN));
                 context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
                 if board.cells[i].has_mine {
