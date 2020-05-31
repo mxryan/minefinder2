@@ -140,6 +140,8 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
     }
 }
 
+/// Translates the click event coordinates to the relative coordinates used by
+/// the game board.
 fn convert_coords(x: i32, y: i32) -> (i32, i32) {
     (x / CELL_LEN as i32, y / CELL_LEN as i32)
 }
