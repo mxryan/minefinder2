@@ -50,7 +50,6 @@ impl Board {
         Board { mines, rows, columns, flags_placed: 0, cells }
     }
 
-    /// TODO: make sure the initial square clicked doesn't have a mine
     pub fn place_mines(&mut self, x_avoid: usize, y_avoid: usize) {
         let index_to_avoid = self.coords_to_index(x_avoid, y_avoid);
         let mut mines_to_place = self.mines;
@@ -91,36 +90,12 @@ impl Board {
 
     pub fn count_neighboring_bombs(&self, i: usize) -> i32 {
         let mut count = 0;
-        let (x, y) = self.index_to_coords(i);
-        let total_cells = self.get_total_number_of_cells();
-
-        for offset_x in -1i32..=1i32 {
-            let x_to_check = x as i32 + offset_x;
-            if x_to_check < 0 || x_to_check >= self.columns as i32 {
-                continue;
-            }
-
-            for offset_y in -1i32..=1i32 {
-                let y_to_check = y as i32 + offset_y;
-
-                if y_to_check < 0
-                    || (x_to_check == 0 && y_to_check == 0)
-                    || y_to_check >= self.rows as i32 {
-
-                    continue;
-                }
-
-                let index_to_check = self.coords_to_index(x_to_check as usize,
-                                                          y_to_check as usize);
-                if index_to_check >= total_cells {
-                    continue;
-                }
-                if self.cells[index_to_check].has_mine {
-                    count += 1;
-                }
+        let neighbors = self.get_neighbors(i);
+        for neighbor in neighbors {
+            if neighbor.has_mine {
+                count += 1;
             }
         }
-
         count
     }
 
@@ -136,21 +111,74 @@ impl Board {
         return self.rows * self.columns;
     }
 
-    // todo: can i match on a tuple like (click, self.cells[i].state) ?
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
         let i = self.coords_to_index(x, y);
-        if click == Click::Left {
-            self.cells[i].state = CellState::Revealed;
-        } else if click == Click::Right {
-            if self.cells[i].state == CellState::Hidden {
+
+
+        match (click, &self.cells[i].state) {
+            (Click::Left, CellState::Hidden) => {
+                self.cells[i].state = CellState::Revealed;
+            }
+
+            (Click::Left, CellState::Revealed) => {
+                // if the number of neighboring flags == the number on this tile
+                //  then reveal all unrevealed neighboring flags
+            }
+
+            (Click::Right, CellState::Hidden) => {
                 self.cells[i].state = CellState::Flagged;
                 self.flags_placed += 1;
-            } else if self.cells[i].state == CellState::Flagged {
+            }
+
+            (Click::Right, CellState::Flagged) => {
                 self.cells[i].state = CellState::Hidden;
                 self.flags_placed -= 1;
             }
+
+            _ => {
+
+                // do nothing
+            }
         }
     }
+
+    // pub fn count_neighboring_flags(&self)
+
+    // todo: if for some reason this doesnt work, then can just return indices
+    //  of neighbors instead of refs to neighbors
+    pub fn get_neighbors(&self, i: usize) -> Vec<&Cell> {
+        let mut out = Vec::new();
+        let (x, y) = self.index_to_coords(i);
+
+        for offset_x in -1i32..=1i32 {
+            let x_to_check = x as i32 + offset_x;
+            if x_to_check < 0 || x_to_check >= self.columns as i32 {
+                continue;
+            }
+            for offset_y in -1i32..=1i32 {
+                if offset_y == 0 && offset_x == 0 {
+                    continue;
+                }
+                let y_to_check = y as i32 + offset_y;
+                if y_to_check < 0 || y_to_check >= self.rows as i32 {
+                    continue;
+                }
+                let index_to_check = self.coords_to_index(x_to_check as usize,
+                                                          y_to_check as usize);
+                out.push(&self.cells[index_to_check]);
+            }
+        }
+
+        out
+    }
+
+    pub fn reveal_neighbors(&mut self, index: usize) {
+        let (x, y) = self.index_to_coords(index);
+    }
+
+    pub fn game_lost(&self) {}
+
+    pub fn game_won(&self) {}
 
     pub fn print_js(&self) {
         for y in 0..self.rows {
@@ -159,6 +187,7 @@ impl Board {
                 let i = self.coords_to_index(x, y);
                 s.push(self.cells[i].repr_val());
             }
+
             log(&s);
         }
     }
@@ -174,7 +203,7 @@ impl Board {
         }
     }
 
-    pub fn row_as_string(&self, row:usize) -> String {
+    pub fn row_as_string(&self, row: usize) -> String {
         let mut s = String::new();
         for x in 0..self.columns {
             let i = self.coords_to_index(x, row);
@@ -190,7 +219,7 @@ impl Cell {
         Cell {
             neighboring_mines: 0,
             state: CellState::Hidden,
-            has_mine: false
+            has_mine: false,
         }
     }
 
@@ -198,7 +227,7 @@ impl Cell {
         Cell {
             neighboring_mines: 0,
             state: CellState::Hidden,
-            has_mine: true
+            has_mine: true,
         }
     }
 
@@ -208,6 +237,18 @@ impl Cell {
         } else {
             std::char::from_digit(self.neighboring_mines as u32, 10)
                 .expect("Failed to convert digit to string in repr_val()")
+        }
+    }
+
+    fn reveal(&mut self) {
+        if self.state == CellState::Hidden {
+            self.state = CellState::Revealed;
+        }
+    }
+
+    fn flag(&mut self) {
+        if self.state == CellState::Hidden {
+            self.state = CellState::Flagged
         }
     }
 }

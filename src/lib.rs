@@ -127,13 +127,14 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
                 context.fill_rect(x * CELL_LEN, y * CELL_LEN, CELL_LEN, CELL_LEN);
                 if board.cells[i].has_mine {
                     context.stroke_text("X", x * CELL_LEN + CELL_LEN / 2.5,
-                                        y * CELL_LEN + CELL_LEN / 1.5, );
+                                        y * CELL_LEN + CELL_LEN / 1.5
+                    ).expect("Failed context.stroke_text");
                 } else {
                     context.stroke_text(
                         &format!("{}", board.cells[i].neighboring_mines),
                         x * CELL_LEN + CELL_LEN / 2.5,
                         y * CELL_LEN + CELL_LEN / 1.5,
-                    );
+                    ).expect("Failed context.stroke_text");
                 }
             }
         }
@@ -146,5 +147,7 @@ fn convert_coords(x: i32, y: i32) -> (i32, i32) {
     (x / CELL_LEN as i32, y / CELL_LEN as i32)
 }
 
-
+// todo: these...
+// fn board_coords_from_canvas_coords
+// fn canvas_coards_from_board_coords
 
