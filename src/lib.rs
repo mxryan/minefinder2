@@ -110,7 +110,7 @@ fn render_grid(context: &web_sys::CanvasRenderingContext2d, board: &Board) {
         let y = (i / GRID_WIDTH) as i32;
         let (canv_x, canv_y) = convert_coords_board_to_canvas(x, y);
 
-        // todo: only draw once. can draw grid with lines instead of rects
+        // todo: only draw grid once. can draw grid with lines instead of rects
         context.stroke_rect(canv_x, canv_y, LEN, LEN);
 
         let font = "14px serif";

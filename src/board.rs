@@ -81,18 +81,15 @@ impl Board {
 
     pub fn set_cells_num_bomb_neighbors(&mut self) {
         for i in 0..self.get_total_number_of_cells() {
-            if self.cells[i].has_mine {
-                continue;
-            }
             self.cells[i].neighboring_mines = self.count_neighboring_bombs(i);
         }
     }
 
     pub fn count_neighboring_bombs(&self, i: usize) -> i32 {
         let mut count = 0;
-        let neighbors = self.get_neighbors(i);
-        for neighbor in neighbors {
-            if neighbor.has_mine {
+        let neighbor_indices = self.get_neighbor_indices(i);
+        for i in neighbor_indices {
+            if self.cells[i].has_mine {
                 count += 1;
             }
         }
@@ -113,11 +110,12 @@ impl Board {
 
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
         let i = self.coords_to_index(x, y);
-
-
         match (click, &self.cells[i].state) {
             (Click::Left, CellState::Hidden) => {
                 self.cells[i].state = CellState::Revealed;
+                if self.cells[i].neighboring_mines == 0 {
+                    self.reveal_neighbors(i);
+                }
             }
 
             (Click::Left, CellState::Revealed) => {
@@ -142,11 +140,12 @@ impl Board {
         }
     }
 
-    // pub fn count_neighboring_flags(&self)
+    pub fn count_neighboring_flags(&self) -> i32 {
+        unimplemented!()
+    }
 
-    // todo: if for some reason this doesnt work, then can just return indices
-    //  of neighbors instead of refs to neighbors
-    pub fn get_neighbors(&self, i: usize) -> Vec<&Cell> {
+
+    pub fn get_neighbor_indices(&self, i: usize) -> Vec<usize> {
         let mut out = Vec::new();
         let (x, y) = self.index_to_coords(i);
 
@@ -163,9 +162,9 @@ impl Board {
                 if y_to_check < 0 || y_to_check >= self.rows as i32 {
                     continue;
                 }
-                let index_to_check = self.coords_to_index(x_to_check as usize,
-                                                          y_to_check as usize);
-                out.push(&self.cells[index_to_check]);
+                let i_neighbor = self.coords_to_index(x_to_check as usize,
+                                                      y_to_check as usize);
+                out.push(i_neighbor)
             }
         }
 
@@ -173,7 +172,15 @@ impl Board {
     }
 
     pub fn reveal_neighbors(&mut self, index: usize) {
-        let (x, y) = self.index_to_coords(index);
+        let neighbor_indices = self.get_neighbor_indices(index);
+        for i in neighbor_indices {
+            if self.cells[i].state == CellState::Hidden {
+                self.cells[i].state = CellState::Revealed;
+                if self.cells[i].neighboring_mines == 0 {
+                    self.reveal_neighbors(i);
+                }
+            }
+        }
     }
 
     pub fn game_lost(&self) {}
