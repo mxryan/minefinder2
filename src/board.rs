@@ -97,7 +97,6 @@ impl Board {
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
         let i = self.coords_to_index(x, y);
         match (click, &self.cells[i].state) {
-
             (Click::Left, CellState::Hidden) => {
                 self.cells[i].state = CellState::Revealed;
                 if self.cells[i].neighboring_mines == 0 {
@@ -108,6 +107,11 @@ impl Board {
             (Click::Left, CellState::Revealed) => {
                 // if the number of neighboring flags == the number on this tile
                 //  then reveal all unrevealed neighboring flags
+                // count num neighboring flags
+                let num_neighboring_flags = self.count_neighboring_flags(i);
+                if num_neighboring_flags == self.cells[i].neighboring_mines {
+                    self.reveal_neighbors(i);
+                }
             }
 
             (Click::Right, CellState::Hidden) => {
@@ -127,10 +131,17 @@ impl Board {
         }
     }
 
-    pub fn count_neighboring_flags(&self) -> i32 {
-        unimplemented!()
-    }
+    pub fn count_neighboring_flags(&self, target_idx: usize) -> i32 {
+        let indices_neighbors = self.get_neighbor_indices(target_idx);
+        let mut count = 0;
+        for i in indices_neighbors {
+            if self.cells[i].state == CellState::Flagged {
+                count += 1;
+            }
+        }
 
+        count
+    }
 
     pub fn get_neighbor_indices(&self, i: usize) -> Vec<usize> {
         let mut out = Vec::new();
