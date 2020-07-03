@@ -17,20 +17,6 @@ pub struct Board {
 }
 
 #[derive(Debug, PartialEq)]
-pub enum CellState {
-    Hidden,
-    Revealed,
-    Flagged,
-}
-
-#[derive(Debug)]
-pub struct Cell {
-    pub neighboring_mines: i32,
-    pub state: CellState,
-    pub has_mine: bool,
-}
-
-#[derive(Debug, PartialEq)]
 pub enum Click {
     Left,
     Right,
@@ -111,6 +97,7 @@ impl Board {
     pub fn update_state(&mut self, x: usize, y: usize, click: Click) {
         let i = self.coords_to_index(x, y);
         match (click, &self.cells[i].state) {
+
             (Click::Left, CellState::Hidden) => {
                 self.cells[i].state = CellState::Revealed;
                 if self.cells[i].neighboring_mines == 0 {
@@ -219,6 +206,20 @@ impl Board {
 
         s
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum CellState {
+    Hidden,
+    Revealed,
+    Flagged,
+}
+
+#[derive(Debug)]
+pub struct Cell {
+    pub neighboring_mines: i32,
+    pub state: CellState,
+    pub has_mine: bool,
 }
 
 impl Cell {
