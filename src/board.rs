@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use super::cell::*;
 
 #[wasm_bindgen]
 extern "C" {
@@ -216,58 +217,7 @@ impl Board {
     }
 }
 
-#[derive(Debug, PartialEq)]
-pub enum CellState {
-    Hidden,
-    Revealed,
-    Flagged,
-}
 
-#[derive(Debug)]
-pub struct Cell {
-    pub neighboring_mines: i32,
-    pub state: CellState,
-    pub has_mine: bool,
-}
-
-impl Cell {
-    fn e() -> Cell {
-        Cell {
-            neighboring_mines: 0,
-            state: CellState::Hidden,
-            has_mine: false,
-        }
-    }
-
-    fn m() -> Cell {
-        Cell {
-            neighboring_mines: 0,
-            state: CellState::Hidden,
-            has_mine: true,
-        }
-    }
-
-    fn repr_val(&self) -> char {
-        if self.has_mine {
-            'x'
-        } else {
-            std::char::from_digit(self.neighboring_mines as u32, 10)
-                .expect("Failed to convert digit to string in repr_val()")
-        }
-    }
-
-    fn reveal(&mut self) {
-        if self.state == CellState::Hidden {
-            self.state = CellState::Revealed;
-        }
-    }
-
-    fn flag(&mut self) {
-        if self.state == CellState::Hidden {
-            self.state = CellState::Flagged
-        }
-    }
-}
 
 fn get_random_buf() -> Result<[u8; 4], getrandom::Error> {
     let mut buf = [0u8; 4];
@@ -286,7 +236,8 @@ fn get_random_f64() -> f64 {
 
 #[cfg(test)]
 mod tests {
-    use crate::board::{Board, Cell};
+    use crate::board::Board;
+    use crate::cell::Cell;
 
     #[test]
     fn coords_to_index_conversions() {

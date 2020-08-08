@@ -3,8 +3,9 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
 mod board;
-
+mod cell;
 use board::*;
+use cell::*;
 
 #[wasm_bindgen]
 extern "C" {
