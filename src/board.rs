@@ -124,10 +124,7 @@ impl Board {
                 self.flags_placed -= 1;
             }
 
-            _ => {
-
-                // do nothing
-            }
+            _ => {}
         }
     }
 
